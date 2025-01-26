@@ -3,9 +3,11 @@ package sniproxy
 import (
 	"context"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/xxxsen/common/logutil"
+	"github.com/xxxsen/common/trace"
 	"go.uber.org/zap"
 )
 
@@ -36,6 +38,7 @@ func (s *SNIProxy) Start() error {
 
 func (s *SNIProxy) serveListener(ls net.Listener) {
 	ctx := context.Background()
+	var idx int64 = 1
 	for {
 		conn, err := ls.Accept()
 		if err != nil {
@@ -45,6 +48,8 @@ func (s *SNIProxy) serveListener(ls net.Listener) {
 		}
 		logutil.GetLogger(ctx).Debug("recv connection", zap.String("addr", conn.RemoteAddr().String()))
 		c := newConnHandler(conn, s)
-		go c.Serve(ctx)
+		newctx := trace.WithTraceId(ctx, strconv.FormatInt(idx, 10))
+		idx++
+		go c.Serve(newctx)
 	}
 }

@@ -77,7 +77,7 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 
 func (h *connHandler) doWhiteListCheck(ctx context.Context) error {
 	if !h.svr.checker.Check(h.sni.ServerName) {
-		return fmt.Errorf("sni not in white list")
+		return fmt.Errorf("sni not in white list, name:%s", h.sni.ServerName)
 	}
 	return nil
 }

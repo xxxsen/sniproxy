@@ -1,14 +1,13 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"sniproxy"
 	"sniproxy/config"
 	"sniproxy/resolver"
 
-	"github.com/xxxsen/common/logutil"
+	"github.com/xxxsen/common/logger"
 	"go.uber.org/zap"
 )
 
@@ -21,21 +20,18 @@ func main() {
 		log.Fatalf("read and decode config failed, file:%s, err:%v", *conf, err)
 	}
 	log.Printf("read config:%+v", *c)
-	ctx := context.Background()
+	logkit := logger.Init(c.LogConfig.File, c.LogConfig.Level, int(c.LogConfig.FileCount), int(c.LogConfig.FileSize), int(c.LogConfig.KeepDays), c.LogConfig.Console)
 	r, err := resolver.Make(c.Resolver)
 	if err != nil {
-		logutil.GetLogger(ctx).Fatal("create resolver failed", zap.Error(err), zap.String("resolver_config", c.Resolver))
-	}
-	if len(c.WhiteList) == 0 {
-		logutil.GetLogger(ctx).Warn("no whitelist found, will proxy all trafic")
+		logkit.Fatal("create resolver failed", zap.Error(err), zap.String("resolver_config", c.Resolver))
 	}
 	pxy, err := sniproxy.New(c.Bind, sniproxy.WithResolver(r), sniproxy.WithWhiteList(c.WhiteList))
 	if err != nil {
-		logutil.GetLogger(ctx).Fatal("make sni proxy failed", zap.Error(err))
+		logkit.Fatal("make sni proxy failed", zap.Error(err))
 	}
 	if err := pxy.Start(); err != nil {
-		logutil.GetLogger(ctx).Fatal("start sni proxy failed", zap.Error(err))
+		logkit.Fatal("start sni proxy failed", zap.Error(err))
 	}
-	logutil.GetLogger(ctx).Info("sni proxy start succ", zap.String("listen", c.Bind))
+	logkit.Info("sni proxy start succ", zap.String("listen", c.Bind))
 	select {}
 }
