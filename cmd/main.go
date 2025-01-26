@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("read and decode config failed, file:%s, err:%v", *conf, err)
 	}
-	log.Printf("read config:%v", *c)
+	log.Printf("read config:%+v", *c)
 	ctx := context.Background()
 	r, err := resolver.Make(c.Resolver)
 	if err != nil {
