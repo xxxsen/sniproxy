@@ -10,8 +10,9 @@ import (
 )
 
 type SNIProxy struct {
-	addr string
-	c    *config
+	addr    string
+	c       *config
+	checker *DomainRule
 }
 
 func New(addr string, opts ...Option) (*SNIProxy, error) {
@@ -19,7 +20,9 @@ func New(addr string, opts ...Option) (*SNIProxy, error) {
 	for _, opt := range opts {
 		opt(c)
 	}
-	return &SNIProxy{addr: addr, c: c}, nil
+	checker := NewDomainRule()
+	checker.AddRules(c.domainRules...)
+	return &SNIProxy{addr: addr, c: c, checker: checker}, nil
 }
 
 func (s *SNIProxy) Start() error {

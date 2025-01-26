@@ -76,12 +76,10 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 }
 
 func (h *connHandler) doWhiteListCheck(ctx context.Context) error {
-	for _, item := range h.svr.c.validDomainList {
-		if h.sni.ServerName == item {
-			return nil
-		}
+	if !h.svr.checker.Check(h.sni.ServerName) {
+		return fmt.Errorf("sni not in white list")
 	}
-	return fmt.Errorf("sni not in white list")
+	return nil
 }
 
 func (h *connHandler) doResolveIP(ctx context.Context) error {
