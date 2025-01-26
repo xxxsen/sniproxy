@@ -25,7 +25,11 @@ func main() {
 	if err != nil {
 		logkit.Fatal("create resolver failed", zap.Error(err), zap.String("resolver_config", c.Resolver))
 	}
-	pxy, err := sniproxy.New(c.Bind, sniproxy.WithResolver(r), sniproxy.WithWhiteList(c.WhiteList))
+	pxy, err := sniproxy.New(c.Bind,
+		sniproxy.WithResolver(r),
+		sniproxy.WithWhiteList(c.WhiteList),
+		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
+	)
 	if err != nil {
 		logkit.Fatal("make sni proxy failed", zap.Error(err))
 	}

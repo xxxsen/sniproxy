@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Bind      string           `json:"bind"`
-	WhiteList []string         `json:"whitelist"`
-	Resolver  string           `json:"resolver"`
-	LogConfig logger.LogConfig `json:"log_config"`
+	Bind          string           `json:"bind"`
+	ProxyProtocol bool             `json:"proxy_protocol"`
+	WhiteList     []string         `json:"whitelist"`
+	Resolver      string           `json:"resolver"`
+	LogConfig     logger.LogConfig `json:"log_config"`
 }
 
 func Parse(f string) (*Config, error) {
