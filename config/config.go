@@ -13,6 +13,8 @@ type Config struct {
 	WhiteList     []string         `json:"whitelist"`
 	Resolver      string           `json:"resolver"`
 	LogConfig     logger.LogConfig `json:"log_config"`
+	DialTimeout   int64            `json:"dial_timeout"`
+	DetectTimeout int64            `json:"detect_timeout"`
 }
 
 func Parse(f string) (*Config, error) {
@@ -26,6 +28,8 @@ func Parse(f string) (*Config, error) {
 			Level:   "debug",
 			Console: true,
 		},
+		DialTimeout:   10,
+		DetectTimeout: 10,
 	}
 	if err := json.Unmarshal(raw, c); err != nil {
 		return nil, err

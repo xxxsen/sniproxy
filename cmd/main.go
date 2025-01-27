@@ -6,6 +6,7 @@ import (
 	"sniproxy"
 	"sniproxy/config"
 	"sniproxy/resolver"
+	"time"
 
 	"github.com/xxxsen/common/logger"
 	"go.uber.org/zap"
@@ -29,6 +30,8 @@ func main() {
 		sniproxy.WithResolver(r),
 		sniproxy.WithWhiteList(c.WhiteList),
 		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
+		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout)*time.Second),
+		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout)*time.Second),
 	)
 	if err != nil {
 		logkit.Fatal("make sni proxy failed", zap.Error(err))
