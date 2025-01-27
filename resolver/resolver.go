@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/schema"
+	lru "github.com/hnlq715/golang-lru"
 )
 
 type IResolver interface {
@@ -22,6 +23,8 @@ type DNSParam struct {
 	EnableIPv6       bool   `schema:"enable_ipv6"`
 	Keepalive        bool   `schema:"keepalive"`
 	KeepaliveTimeout int64  `schema:"keepalive_timeout"`
+	CacheTTL         int64  `schema:"cache_ttl"`
+	CacheSize        int64  `schema:"cache_size"`
 }
 
 type Creator func(p *DNSParam) (*net.Resolver, error)
@@ -37,6 +40,8 @@ func uriToDNSParam(uri *url.URL) (*DNSParam, error) {
 		EnableIPv6:       false,
 		Keepalive:        true,
 		KeepaliveTimeout: 10 * 60,
+		CacheTTL:         300,
+		CacheSize:        1000,
 	}
 	dec := schema.NewDecoder()
 	if err := dec.Decode(p, uri.Query()); err != nil {
@@ -62,7 +67,7 @@ func Make(link string) (IResolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newDefaultResolver(r, param), nil
+	return newDefaultResolver(r, param)
 }
 
 func Register(schema string, cr Creator) {
@@ -72,6 +77,11 @@ func Register(schema string, cr Creator) {
 type defaultResolver struct {
 	r     *net.Resolver
 	param *DNSParam
+	c     *lru.Cache
+}
+
+func (r *defaultResolver) makeCacheKey(nettype string, domain string) string {
+	return fmt.Sprintf("cache:%s:%s", nettype, domain)
 }
 
 func (r *defaultResolver) Resolve(ctx context.Context, domain string) ([]net.IP, error) {
@@ -79,9 +89,23 @@ func (r *defaultResolver) Resolve(ctx context.Context, domain string) ([]net.IP,
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.param.Timeout)*time.Second)
-	defer cancel()
-	return r.r.LookupIP(ctx, nettype, domain)
+	loader := func(ctx context.Context) ([]net.IP, error) {
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(r.param.Timeout)*time.Second)
+		defer cancel()
+		return r.r.LookupIP(ctx, nettype, domain)
+	}
+	cacheKey := r.makeCacheKey(nettype, domain)
+	if res, ok := r.c.Get(cacheKey); ok {
+		return res.([]net.IP), nil
+	}
+	res, err := loader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if r.param.CacheTTL > 0 {
+		r.c.AddEx(cacheKey, res, time.Duration(r.param.CacheTTL)*time.Second)
+	}
+	return res, nil
 }
 
 func (r *defaultResolver) resolveNetworkType(enablev4, enablev6 bool) (string, error) {
@@ -97,9 +121,14 @@ func (r *defaultResolver) resolveNetworkType(enablev4, enablev6 bool) (string, e
 	return "ip", nil
 }
 
-func newDefaultResolver(r *net.Resolver, p *DNSParam) IResolver {
+func newDefaultResolver(r *net.Resolver, p *DNSParam) (IResolver, error) {
+	c, err := lru.New(int(p.CacheSize))
+	if err != nil {
+		return nil, err
+	}
 	return &defaultResolver{
 		r:     r,
 		param: p,
-	}
+		c:     c,
+	}, nil
 }
