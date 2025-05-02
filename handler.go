@@ -20,14 +20,14 @@ import (
 
 type connHandler struct {
 	conn net.Conn
-	svr  *SNIProxy
+	svr  *sniproxyImpl
 	//中间产物
 	sni      string
 	port     string
 	targetIp string
 }
 
-func newConnHandler(conn net.Conn, svr *SNIProxy) *connHandler {
+func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
 	return &connHandler{conn: conn, svr: svr}
 }
 

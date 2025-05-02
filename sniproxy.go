@@ -12,32 +12,38 @@ import (
 	"go.uber.org/zap"
 )
 
-type SNIProxy struct {
+type ISNIProxy interface {
+	Run(ctx context.Context) error
+}
+
+type sniproxyImpl struct {
 	addr    string
 	c       *config
 	checker *DomainRule
 }
 
-func New(addr string, opts ...Option) (*SNIProxy, error) {
+func New(addr string, opts ...Option) (ISNIProxy, error) {
 	c := &config{}
 	for _, opt := range opts {
 		opt(c)
 	}
 	checker := NewDomainRule()
-	checker.AddRules(c.domainRules...)
-	return &SNIProxy{addr: addr, c: c, checker: checker}, nil
+	if err := checker.AddRules(c.domainRules...); err != nil {
+		return nil, err
+	}
+	return &sniproxyImpl{addr: addr, c: c, checker: checker}, nil
 }
 
-func (s *SNIProxy) Start() error {
+func (s *sniproxyImpl) Run(ctx context.Context) error {
 	ls, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return err
 	}
-	go s.serveListener(ls)
+	s.serveListener(ls)
 	return nil
 }
 
-func (s *SNIProxy) serveListener(ls net.Listener) {
+func (s *sniproxyImpl) serveListener(ls net.Listener) {
 	pls := &proxyproto.Listener{
 		Listener:          ls,
 		ReadHeaderTimeout: 10 * time.Second,
