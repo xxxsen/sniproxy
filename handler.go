@@ -33,7 +33,7 @@ func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
 
 func (h *connHandler) Serve(ctx context.Context) {
 	defer func() {
-		h.conn.Close()
+		_ = h.conn.Close()
 	}()
 	handlers := []struct {
 		name string
