@@ -90,9 +90,9 @@ func (h *connHandler) doResolveHTTPTarget(ctx context.Context, r *bufio.Reader) 
 }
 
 func (h *connHandler) doResolveSNI(ctx context.Context) error {
-	h.conn.SetReadDeadline(time.Now().Add(h.svr.c.detectTimeout))
+	_ = h.conn.SetReadDeadline(time.Now().Add(h.svr.c.detectTimeout))
 	defer func() {
-		h.conn.SetReadDeadline(time.Time{})
+		_ = h.conn.SetReadDeadline(time.Time{})
 	}()
 
 	peekedBytes := new(bytes.Buffer)
@@ -141,7 +141,7 @@ func (h *connHandler) doResolveIP(ctx context.Context) error {
 }
 
 func (h *connHandler) doProxy(ctx context.Context) error {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", h.targetIp, h.port), h.svr.c.dialTimeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.targetIp, h.port), h.svr.c.dialTimeout)
 	if err != nil {
 		return err
 	}
