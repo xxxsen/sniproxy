@@ -19,7 +19,7 @@ type ISNIProxy interface {
 type sniproxyImpl struct {
 	addr    string
 	c       *config
-	checker *DomainRule
+	checker IDomainRule
 }
 
 func New(addr string, opts ...Option) (ISNIProxy, error) {
@@ -28,8 +28,10 @@ func New(addr string, opts ...Option) (ISNIProxy, error) {
 		opt(c)
 	}
 	checker := NewDomainRule()
-	if err := checker.AddRules(c.domainRules...); err != nil {
-		return nil, err
+	for _, item := range c.domainRules {
+		if err := checker.Add(item.Rule, item); err != nil {
+			return nil, err
+		}
 	}
 	return &sniproxyImpl{addr: addr, c: c, checker: checker}, nil
 }

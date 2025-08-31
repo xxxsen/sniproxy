@@ -3,93 +3,115 @@ package sniproxy
 import (
 	"fmt"
 	"regexp"
+	"sniproxy/constant"
 	"strings"
 )
 
-type DomainRule struct { //低效率, 但是无所谓
-	suffixList  []string
-	regexpList  []*regexp.Regexp
-	keywordList []string
-	fullMap     map[string]struct{}
+type domainRuleBasicItem struct {
+	rule string
+	data interface{}
 }
 
-func NewDomainRule() *DomainRule {
-	r := &DomainRule{
-		fullMap: make(map[string]struct{}),
+type domainRuleRegexpItem struct {
+	rule *regexp.Regexp
+	data interface{}
+}
+
+type domainRuleImpl struct { //低效率, 但是无所谓
+	suffixList  []domainRuleBasicItem
+	regexpList  []domainRuleRegexpItem
+	keywordList []domainRuleBasicItem
+	fullMap     map[string]interface{}
+}
+
+type IDomainRule interface {
+	Add(rule string, data interface{}) error
+	Check(domain string) (interface{}, bool)
+}
+
+func NewDomainRule() IDomainRule {
+	r := &domainRuleImpl{
+		fullMap: make(map[string]interface{}),
 	}
 	return r
 }
 
-func (r *DomainRule) AddRules(rules ...string) error {
-	for _, rule := range rules {
-		if err := r.AddRule(rule); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *DomainRule) AddRule(rule string) error {
+func (r *domainRuleImpl) Add(rule string, data interface{}) error {
 	idx := strings.Index(rule, ":")
-	if idx < 0 {
-		return r.addSuffixRule(rule)
+	var typ = constant.DomainTypeSuffix
+	var domain = rule
+	if idx > 0 {
+		typ = rule[:idx]
+		domain = rule[idx+1:]
 	}
-	typ := rule[:idx]
-	domain := rule[idx+1:]
+	if len(typ) == 0 || len(domain) == 0 {
+		return fmt.Errorf("invalid rule type/domain, rule:%s", rule)
+	}
 	switch typ {
-	case "full":
-		return r.addFullRule(domain)
-	case "regexp":
-		return r.addRegexpRule(domain)
-	case "keyword":
-		return r.addKeywordRule(domain)
+	case constant.DomainTypeFull:
+		return r.addFullRule(domain, data)
+	case constant.DomainTypeRegexp:
+		return r.addRegexpRule(domain, data)
+	case constant.DomainTypeKeyword:
+		return r.addKeywordRule(domain, data)
+	case constant.DomainTypeSuffix:
+		return r.addSuffixRule(domain, data)
 	default:
 		return fmt.Errorf("unknown rule type:%s", typ)
 	}
 }
 
-func (r *DomainRule) addSuffixRule(domain string) error {
-	r.suffixList = append(r.suffixList, domain)
+func (r *domainRuleImpl) addSuffixRule(domain string, data interface{}) error {
+	r.suffixList = append(r.suffixList, domainRuleBasicItem{
+		rule: domain,
+		data: data,
+	})
 	return nil
 }
 
-func (r *DomainRule) addFullRule(domain string) error {
-	r.fullMap[domain] = struct{}{}
+func (r *domainRuleImpl) addFullRule(domain string, data interface{}) error {
+	r.fullMap[domain] = data
 	return nil
 }
 
-func (r *DomainRule) addRegexpRule(domain string) error {
+func (r *domainRuleImpl) addRegexpRule(domain string, data interface{}) error {
 	re, err := regexp.Compile(domain)
 	if err != nil {
 		return err
 	}
-	r.regexpList = append(r.regexpList, re)
+	r.regexpList = append(r.regexpList, domainRuleRegexpItem{
+		rule: re,
+		data: data,
+	})
 	return nil
 }
 
-func (r *DomainRule) addKeywordRule(domain string) error {
-	r.keywordList = append(r.keywordList, domain)
+func (r *domainRuleImpl) addKeywordRule(domain string, data interface{}) error {
+	r.keywordList = append(r.keywordList, domainRuleBasicItem{
+		rule: domain,
+		data: data,
+	})
 	return nil
 }
 
-func (r *DomainRule) Check(domain string) bool {
-	if _, ok := r.fullMap[domain]; ok {
-		return true
+func (r *domainRuleImpl) Check(domain string) (interface{}, bool) {
+	if v, ok := r.fullMap[domain]; ok {
+		return v, true
 	}
 	for _, suffix := range r.suffixList {
-		if strings.HasSuffix(domain, suffix) {
-			return true
+		if strings.HasSuffix(domain, suffix.rule) {
+			return suffix.data, true
 		}
 	}
 	for _, kw := range r.keywordList {
-		if strings.Contains(domain, kw) {
-			return true
+		if strings.Contains(domain, kw.rule) {
+			return kw.data, true
 		}
 	}
 	for _, re := range r.regexpList {
-		if re.MatchString(domain) {
-			return true
+		if re.rule.MatchString(domain) {
+			return re.data, true
 		}
 	}
-	return false
+	return nil, false
 }

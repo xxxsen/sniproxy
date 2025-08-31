@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"sniproxy/constant"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,9 +24,11 @@ type connHandler struct {
 	conn net.Conn
 	svr  *sniproxyImpl
 	//中间产物
-	sni      string
-	port     string
-	targetIp string
+	ruleData   *DomainRuleItem
+	isTLS      bool
+	sni        string
+	port       string
+	nextTarget string
 }
 
 func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
@@ -40,8 +44,9 @@ func (h *connHandler) Serve(ctx context.Context) {
 		fn   func(ctx context.Context) error
 	}{
 		{"resolve_sni", h.doResolveSNI},
-		{"check_whitelist", h.doWhiteListCheck},
-		{"resolve_ip", h.doResolveIP},
+		{"rule_check", h.doRuleCheck},
+		{"basic_rule_handle", h.doBasicRuleHandle},
+		{"extra_rule_handle", h.doExtraRuleHandle},
 		{"proxy_request", h.doProxy},
 	}
 	start := time.Now()
@@ -53,8 +58,8 @@ func (h *connHandler) Serve(ctx context.Context) {
 		}
 		logutil.GetLogger(ctx).Debug("process sni step succ", zap.String("step", step.name), zap.Duration("cost", time.Since(stepStart)))
 	}
-	logutil.GetLogger(ctx).Info("processs sni proxy succ", zap.String("sni", h.sni),
-		zap.String("ip", h.targetIp), zap.String("port", h.port), zap.Duration("cost", time.Since(start)))
+	logutil.GetLogger(ctx).Info("processs sni proxy succ", zap.String("sni", h.sni), zap.Bool("is_tls", h.isTLS),
+		zap.String("next_target", h.nextTarget), zap.String("port", h.port), zap.Duration("cost", time.Since(start)))
 }
 
 func (h *connHandler) doResolveTlsTarget(ctx context.Context, r *bufio.Reader) (string, string, error) {
@@ -102,18 +107,19 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read first byte failed, err:%w", err)
 	}
-
 	var detecter = h.doResolveTlsTarget
-
 	switch bs[0] {
 	case 'G', 'P', 'C', 'H', 'O', 'D', 'T': //HTTP GET/PUT/CONNECT/HEAD/OPTION/DELETE/TRACE
 		detecter = h.doResolveHTTPTarget
+	default:
+		detecter = h.doResolveTlsTarget
+		h.isTLS = true
+
 	}
 	domain, port, err := detecter(ctx, bio)
 	if err != nil {
 		return fmt.Errorf("detect sni failed, err:%w", err)
 	}
-
 	r = io.MultiReader(peekedBytes, h.conn)
 	h.conn = iotool.WrapConn(h.conn, r, nil, nil)
 	h.sni = domain
@@ -121,27 +127,53 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doWhiteListCheck(ctx context.Context) error {
-	if !h.svr.checker.Check(h.sni) {
+func (h *connHandler) doRuleCheck(ctx context.Context) error {
+	data, ok := h.svr.checker.Check(h.sni)
+	if !ok {
 		return fmt.Errorf("sni not in white list, name:%s", h.sni)
+	}
+	h.ruleData = data.(*DomainRuleItem)
+	return nil
+}
+
+func (h *connHandler) doBasicRuleHandle(ctx context.Context) error {
+	logutil.GetLogger(ctx).Debug("domain match rule", zap.String("domain", h.sni),
+		zap.String("rule", h.ruleData.Rule), zap.String("rule_type", h.ruleData.Type))
+	switch h.ruleData.Type {
+	case constant.DomainRuleTypeResolve:
+		ips, err := h.ruleData.Resolver.Resolve(ctx, h.sni)
+		if err != nil {
+			return err
+		}
+		if len(ips) == 0 {
+			return fmt.Errorf("no ip link with domain")
+		}
+		h.nextTarget = ips[rand.Int()%len(ips)].String()
+	case constant.DomainRuleTypeMapping:
+		h.nextTarget = h.ruleData.MappingName
+	default:
+		return fmt.Errorf("no rule type to handle, type:%s", h.ruleData.Type)
 	}
 	return nil
 }
 
-func (h *connHandler) doResolveIP(ctx context.Context) error {
-	ips, err := h.svr.c.r.Resolve(ctx, h.sni)
-	if err != nil {
-		return err
+func (h *connHandler) doExtraRuleHandle(ctx context.Context) error {
+	if h.ruleData.Extra == nil {
+		return nil
 	}
-	if len(ips) == 0 {
-		return fmt.Errorf("no ip link with domain")
+	if h.ruleData.Extra.RewriteTLSPort > 0 && h.isTLS {
+		logutil.GetLogger(ctx).Debug("rewrite tls port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.Extra.RewriteTLSPort))
+		h.port = strconv.FormatUint(uint64(h.ruleData.Extra.RewriteTLSPort), 10)
 	}
-	h.targetIp = ips[rand.Int()%len(ips)].String()
+	if h.ruleData.Extra.RewriteHTTPPort > 0 && !h.isTLS {
+		logutil.GetLogger(ctx).Debug("rewrite http port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.Extra.RewriteHTTPPort))
+		h.port = strconv.FormatUint(uint64(h.ruleData.Extra.RewriteHTTPPort), 10)
+	}
 	return nil
 }
 
 func (h *connHandler) doProxy(ctx context.Context) error {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.targetIp, h.port), h.svr.c.dialTimeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.nextTarget, h.port), h.svr.c.dialTimeout)
 	if err != nil {
 		return err
 	}

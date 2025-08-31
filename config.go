@@ -5,9 +5,29 @@ import (
 	"time"
 )
 
+type DomainRuleItemConfig struct {
+	Rule        string                     `json:"rule,omitempty"`
+	Type        string                     `json:"type,omitempty"`
+	Resolver    string                     `json:"resolver,omitempty"`
+	MappingName string                     `json:"mapping_name,omitempty"`
+	Extra       *DomainRuleItemExtraConfig `json:"extra,omitempty"`
+}
+
+type DomainRuleItemExtraConfig struct {
+	RewriteHTTPPort uint16 `json:"rewrite_http_port,omitempty"`
+	RewriteTLSPort  uint16 `json:"rewrite_tls_port,omitempty"`
+}
+
+type DomainRuleItem struct {
+	Rule        string
+	Type        string
+	Resolver    resolver.IResolver
+	MappingName string
+	Extra       *DomainRuleItemExtraConfig
+}
+
 type config struct {
-	r                   resolver.IResolver
-	domainRules         []string
+	domainRules         []*DomainRuleItem
 	listenProxyProtocol bool
 	dialTimeout         time.Duration
 	detectTimeout       time.Duration
@@ -15,15 +35,9 @@ type config struct {
 
 type Option func(c *config)
 
-func WithResolver(r resolver.IResolver) Option {
+func WithAddDomainRule(rule string, data *DomainRuleItem) Option {
 	return func(c *config) {
-		c.r = r
-	}
-}
-
-func WithWhiteList(list []string) Option {
-	return func(c *config) {
-		c.domainRules = list
+		c.domainRules = append(c.domainRules, data)
 	}
 }
 
