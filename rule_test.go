@@ -6,31 +6,81 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testRule struct {
+	domain string
+	ok     bool
+}
+
 func TestRule(t *testing.T) {
-	rules := []string{
-		"a.com",               //suffix
-		"full:x.com",          //full
-		"keyword:google",      //keyword
-		`regexp:^[a-z]+\.cc$`, //regexp
+	rules := map[string][]testRule{
+		"a.com": []testRule{
+			{
+				domain: "a.com",
+				ok:     true,
+			},
+			{
+				domain: "1.a.com",
+				ok:     true,
+			},
+			{
+				domain: "2.x.a.com",
+				ok:     true,
+			},
+		}, //suffix
+		"full:x.com": []testRule{
+			{
+				domain: "x.com",
+				ok:     true,
+			},
+			{
+				domain: "2.x.com",
+				ok:     false,
+			},
+			{
+				domain: "2x.com",
+				ok:     false,
+			},
+		}, //full
+		"keyword:google": []testRule{
+			{
+				domain: "google.com",
+				ok:     true,
+			},
+			{
+				domain: "zzgoogleccc.com",
+				ok:     true,
+			},
+			{
+				domain: "googl.com",
+				ok:     false,
+			},
+		}, //keyword
+		`regexp:^[a-z]+\.cc$`: []testRule{
+			{
+				domain: "abc.cc",
+				ok:     true,
+			},
+			{
+				domain: "abcd.cc",
+				ok:     true,
+			},
+			{
+				domain: "1.abc.cc",
+				ok:     false,
+			},
+			{
+				domain: "1ab.cc",
+				ok:     false,
+			},
+		}, //regexp
 	}
-	r := NewDomainRule()
-	err := r.AddRules(rules...)
-	assert.NoError(t, err)
-	//suffix
-	assert.True(t, r.Check("a.com"))
-	assert.True(t, r.Check("1.a.com"))
-	assert.True(t, r.Check("2.x.a.com"))
-	//full
-	assert.True(t, r.Check("x.com"))
-	assert.False(t, r.Check("2.x.com"))
-	assert.False(t, r.Check("2x.com"))
-	//keyword
-	assert.True(t, r.Check("google.com"))
-	assert.True(t, r.Check("zzgoogleccc.com"))
-	assert.False(t, r.Check("googl.com"))
-	//regexp
-	assert.True(t, r.Check("abc.cc"))
-	assert.True(t, r.Check("abcd.cc"))
-	assert.False(t, r.Check("1.abc.cc"))
-	assert.False(t, r.Check("1ab.cc"))
+	dr := NewDomainRule()
+	for rule, testRuleList := range rules {
+		err := dr.Add(rule, nil)
+		assert.NoError(t, err)
+		for _, item := range testRuleList {
+			_, ok := dr.Check(item.domain)
+			assert.Equal(t, ok, item.ok)
+		}
+	}
 }

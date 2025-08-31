@@ -28,12 +28,17 @@ func main() {
 	if err != nil {
 		logkit.Fatal("create resolver failed", zap.Error(err), zap.String("resolver_config", c.Resolver))
 	}
-	pxy, err := sniproxy.New(c.Bind,
+	opts := []sniproxy.Option{
 		sniproxy.WithResolver(r),
-		sniproxy.WithWhiteList(c.WhiteList),
 		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
-		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout)*time.Second),
-		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout)*time.Second),
+		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout) * time.Second),
+		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout) * time.Second),
+	}
+	for _, wr := range c.DomainRule {
+		opts = append(opts, sniproxy.WithAddDomainRule(wr.Rule, wr))
+	}
+	pxy, err := sniproxy.New(c.Bind,
+		opts...,
 	)
 	if err != nil {
 		logkit.Fatal("make sni proxy failed", zap.Error(err))

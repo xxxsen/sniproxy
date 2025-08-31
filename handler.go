@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"sniproxy/constant"
 	"strings"
 	"time"
 
@@ -22,9 +23,9 @@ type connHandler struct {
 	conn net.Conn
 	svr  *sniproxyImpl
 	//中间产物
-	sni      string
-	port     string
-	targetIp string
+	sni        string
+	port       string
+	nextTarget string
 }
 
 func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
@@ -40,8 +41,7 @@ func (h *connHandler) Serve(ctx context.Context) {
 		fn   func(ctx context.Context) error
 	}{
 		{"resolve_sni", h.doResolveSNI},
-		{"check_whitelist", h.doWhiteListCheck},
-		{"resolve_ip", h.doResolveIP},
+		{"rule_handle", h.doRuleHandle},
 		{"proxy_request", h.doProxy},
 	}
 	start := time.Now()
@@ -54,7 +54,7 @@ func (h *connHandler) Serve(ctx context.Context) {
 		logutil.GetLogger(ctx).Debug("process sni step succ", zap.String("step", step.name), zap.Duration("cost", time.Since(stepStart)))
 	}
 	logutil.GetLogger(ctx).Info("processs sni proxy succ", zap.String("sni", h.sni),
-		zap.String("ip", h.targetIp), zap.String("port", h.port), zap.Duration("cost", time.Since(start)))
+		zap.String("next_target", h.nextTarget), zap.String("port", h.port), zap.Duration("cost", time.Since(start)))
 }
 
 func (h *connHandler) doResolveTlsTarget(ctx context.Context, r *bufio.Reader) (string, string, error) {
@@ -121,27 +121,32 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doWhiteListCheck(ctx context.Context) error {
-	if !h.svr.checker.Check(h.sni) {
+func (h *connHandler) doRuleHandle(ctx context.Context) error {
+	data, ok := h.svr.checker.Check(h.sni)
+	if !ok {
 		return fmt.Errorf("sni not in white list, name:%s", h.sni)
 	}
-	return nil
-}
-
-func (h *connHandler) doResolveIP(ctx context.Context) error {
-	ips, err := h.svr.c.r.Resolve(ctx, h.sni)
-	if err != nil {
-		return err
+	ruleData := data.(*DomainRuleItem)
+	switch ruleData.Type {
+	case constant.DomainRuleTypeResolve:
+		ips, err := h.svr.c.r.Resolve(ctx, h.sni)
+		if err != nil {
+			return err
+		}
+		if len(ips) == 0 {
+			return fmt.Errorf("no ip link with domain")
+		}
+		h.nextTarget = ips[rand.Int()%len(ips)].String()
+	case constant.DomainRuleTypeMapping:
+		h.nextTarget = ruleData.MappingName
+	default:
+		return fmt.Errorf("no rule type to handle, type:%s", ruleData.Type)
 	}
-	if len(ips) == 0 {
-		return fmt.Errorf("no ip link with domain")
-	}
-	h.targetIp = ips[rand.Int()%len(ips)].String()
 	return nil
 }
 
 func (h *connHandler) doProxy(ctx context.Context) error {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.targetIp, h.port), h.svr.c.dialTimeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.nextTarget, h.port), h.svr.c.dialTimeout)
 	if err != nil {
 		return err
 	}
