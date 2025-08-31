@@ -69,5 +69,6 @@ func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem
 		Type:        dr.Type,
 		Resolver:    r,
 		MappingName: dr.MappingName,
+		Extra:       dr.Extra,
 	}, nil
 }
