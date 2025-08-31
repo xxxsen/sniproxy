@@ -127,9 +127,11 @@ func (h *connHandler) doRuleHandle(ctx context.Context) error {
 		return fmt.Errorf("sni not in white list, name:%s", h.sni)
 	}
 	ruleData := data.(*DomainRuleItem)
+	logutil.GetLogger(ctx).Debug("domain match rule", zap.String("domain", h.sni),
+		zap.String("rule", ruleData.Rule), zap.String("rule_type", ruleData.Type))
 	switch ruleData.Type {
 	case constant.DomainRuleTypeResolve:
-		ips, err := h.svr.c.r.Resolve(ctx, h.sni)
+		ips, err := ruleData.Resolver.Resolve(ctx, h.sni)
 		if err != nil {
 			return err
 		}

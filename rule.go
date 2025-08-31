@@ -44,6 +44,9 @@ func (r *domainRuleImpl) Add(rule string, data interface{}) error {
 		typ = rule[:idx]
 		domain = rule[idx+1:]
 	}
+	if len(typ) == 0 || len(domain) == 0 {
+		return fmt.Errorf("invalid rule type/domain, rule:%s", rule)
+	}
 	switch typ {
 	case constant.DomainTypeFull:
 		return r.addFullRule(domain, data)

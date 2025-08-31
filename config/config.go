@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"sniproxy"
 	"sniproxy/constant"
@@ -10,14 +11,14 @@ import (
 )
 
 type Config struct {
-	Bind          string                     `json:"bind"`
-	ProxyProtocol bool                       `json:"proxy_protocol"`
-	WhiteList     []string                   `json:"whitelist"` //Deprecated: use DomainRule
-	Resolver      string                     `json:"resolver"`
-	LogConfig     logger.LogConfig           `json:"log_config"`
-	DialTimeout   int64                      `json:"dial_timeout"`
-	DetectTimeout int64                      `json:"detect_timeout"`
-	DomainRule    []*sniproxy.DomainRuleItem `json:"domain_rule"`
+	Bind          string                           `json:"bind"`
+	ProxyProtocol bool                             `json:"proxy_protocol"`
+	WhiteList     []string                         `json:"whitelist"` //Deprecated: use DomainRule
+	Resolver      string                           `json:"resolver"`  //Deprecated: use DomainRule.Resolver
+	LogConfig     logger.LogConfig                 `json:"log_config"`
+	DialTimeout   int64                            `json:"dial_timeout"`
+	DetectTimeout int64                            `json:"detect_timeout"`
+	DomainRule    []*sniproxy.DomainRuleItemConfig `json:"domain_rule"`
 }
 
 func Parse(f string) (*Config, error) {
@@ -38,10 +39,14 @@ func Parse(f string) (*Config, error) {
 		return nil, err
 	}
 	for _, item := range c.WhiteList {
-		c.DomainRule = append(c.DomainRule, &sniproxy.DomainRuleItem{
-			Rule: item,
-			Type: constant.DomainRuleTypeResolve,
+		c.DomainRule = append(c.DomainRule, &sniproxy.DomainRuleItemConfig{
+			Rule:     item,
+			Type:     constant.DomainRuleTypeResolve,
+			Resolver: c.Resolver,
 		})
+	}
+	if len(c.WhiteList) > 0 {
+		log.Printf("warning: you are using old sni whitelist/resolver config, migrate to DomainRule config plz.")
 	}
 	c.WhiteList = nil
 	return c, nil
