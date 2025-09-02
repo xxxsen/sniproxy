@@ -41,12 +41,11 @@ func (s *sniproxyImpl) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.serveListener(ls)
+	s.serveListener(ctx, ls)
 	return nil
 }
 
-func (s *sniproxyImpl) serveListener(ls net.Listener) {
-	ctx := context.Background()
+func (s *sniproxyImpl) serveListener(ctx context.Context, ls net.Listener) {
 	var idx int64 = 1
 	for {
 		conn, err := ls.Accept()
