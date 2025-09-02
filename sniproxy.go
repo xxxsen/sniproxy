@@ -3,6 +3,7 @@ package sniproxy
 import (
 	"context"
 	"net"
+	"sniproxy/domainrule"
 	"strconv"
 	"time"
 
@@ -19,7 +20,7 @@ type ISNIProxy interface {
 type sniproxyImpl struct {
 	addr    string
 	c       *config
-	checker IDomainRule
+	checker domainrule.IDomainRule
 }
 
 func New(addr string, opts ...Option) (ISNIProxy, error) {
@@ -27,7 +28,7 @@ func New(addr string, opts ...Option) (ISNIProxy, error) {
 	for _, opt := range opts {
 		opt(c)
 	}
-	checker := NewDomainRule()
+	checker := domainrule.NewDomainRule()
 	for _, item := range c.domainRules {
 		if err := checker.Add(item.Rule, item); err != nil {
 			return nil, err

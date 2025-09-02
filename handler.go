@@ -136,7 +136,10 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 }
 
 func (h *connHandler) doRuleCheck(ctx context.Context) error {
-	data, ok := h.svr.checker.Check(h.sni)
+	data, ok, err := h.svr.checker.Check(ctx, h.sni)
+	if err != nil {
+		return fmt.Errorf("check rule failed, err:%w", err)
+	}
 	if !ok {
 		return fmt.Errorf("sni not in white list, name:%s", h.sni)
 	}
