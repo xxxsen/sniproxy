@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pires/go-proxyproto"
 	"github.com/xxxsen/common/logutil"
 	"github.com/xxxsen/common/trace"
 	"go.uber.org/zap"
@@ -47,14 +46,10 @@ func (s *sniproxyImpl) Run(ctx context.Context) error {
 }
 
 func (s *sniproxyImpl) serveListener(ls net.Listener) {
-	pls := &proxyproto.Listener{
-		Listener:          ls,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
 	ctx := context.Background()
 	var idx int64 = 1
 	for {
-		conn, err := pls.Accept()
+		conn, err := ls.Accept()
 		if err != nil {
 			logutil.GetLogger(ctx).Error("recv connect failed", zap.Error(err))
 			time.Sleep(10 * time.Millisecond)
