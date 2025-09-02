@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pires/go-proxyproto"
 	"github.com/xxxsen/common/iotool"
 	"github.com/xxxsen/common/logutil"
 	"go.uber.org/zap"
@@ -29,6 +30,8 @@ type connHandler struct {
 	sni        string
 	port       string
 	nextTarget string
+	//
+	remote net.Conn
 }
 
 func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
@@ -38,6 +41,9 @@ func newConnHandler(conn net.Conn, svr *sniproxyImpl) *connHandler {
 func (h *connHandler) Serve(ctx context.Context) {
 	defer func() {
 		_ = h.conn.Close()
+		if h.remote != nil {
+			_ = h.remote.Close()
+		}
 	}()
 	handlers := []struct {
 		name string
@@ -46,7 +52,9 @@ func (h *connHandler) Serve(ctx context.Context) {
 		{"resolve_sni", h.doResolveSNI},
 		{"rule_check", h.doRuleCheck},
 		{"basic_rule_handle", h.doBasicRuleHandle},
-		{"extra_rule_handle", h.doExtraRuleHandle},
+		{"port_rewrite", h.doPortRewrite},
+		{"dial_remote", h.doDialRemote},
+		{"proxy_protocol", h.doProxyProtocol},
 		{"proxy_request", h.doProxy},
 	}
 	start := time.Now()
@@ -157,7 +165,7 @@ func (h *connHandler) doBasicRuleHandle(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doExtraRuleHandle(ctx context.Context) error {
+func (h *connHandler) doPortRewrite(ctx context.Context) error {
 	if h.ruleData.Extra == nil {
 		return nil
 	}
@@ -172,11 +180,26 @@ func (h *connHandler) doExtraRuleHandle(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doProxy(ctx context.Context) error {
+func (h *connHandler) doDialRemote(ctx context.Context) error {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(h.nextTarget, h.port), h.svr.c.dialTimeout)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	return iotool.ProxyStream(ctx, h.conn, conn)
+	h.remote = conn
+	return nil
+}
+
+func (h *connHandler) doProxyProtocol(ctx context.Context) error {
+	if h.ruleData.Extra == nil || !h.ruleData.Extra.ProxyProtocol {
+		return nil
+	}
+	hdr := proxyproto.HeaderProxyFromAddrs(0, h.conn.RemoteAddr(), h.conn.LocalAddr())
+	if _, err := hdr.WriteTo(h.remote); err != nil {
+		return fmt.Errorf("write proxy protocol failed, err:%w", err)
+	}
+	return nil
+}
+
+func (h *connHandler) doProxy(ctx context.Context) error {
+	return iotool.ProxyStream(ctx, h.conn, h.remote)
 }

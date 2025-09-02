@@ -27,7 +27,6 @@ func main() {
 	logkit := logger.Init(c.LogConfig.File, c.LogConfig.Level, int(c.LogConfig.FileCount), int(c.LogConfig.FileSize), int(c.LogConfig.KeepDays), c.LogConfig.Console)
 	logkit.Info("read config", zap.Any("config", *c))
 	opts := []sniproxy.Option{
-		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
 		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout) * time.Second),
 		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout) * time.Second),
 	}
