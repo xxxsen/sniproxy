@@ -1,6 +1,7 @@
-package sniproxy
+package domainrule
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,8 +80,18 @@ func TestRule(t *testing.T) {
 		err := dr.Add(rule, nil)
 		assert.NoError(t, err)
 		for _, item := range testRuleList {
-			_, ok := dr.Check(item.domain)
+			_, ok, _ := dr.Check(context.Background(), item.domain)
 			assert.Equal(t, ok, item.ok)
 		}
 	}
+}
+
+func TestOrder(t *testing.T) {
+	dr := NewDomainRule()
+	dr.Add("suffix:a.com", 1)
+	dr.Add("full:1.a.com", 2)
+	v, ok, err := dr.Check(context.Background(), "1.a.com")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, 1, v)
 }
