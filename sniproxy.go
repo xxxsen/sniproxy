@@ -59,10 +59,10 @@ func (s *sniproxyImpl) serveListener(ls net.Listener) {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
-		logutil.GetLogger(ctx).Debug("recv connection", zap.String("addr", conn.RemoteAddr().String()))
-		c := newConnHandler(conn, s)
 		newctx := trace.WithTraceId(ctx, strconv.FormatInt(idx, 10))
 		idx++
+		logutil.GetLogger(newctx).Info("recv connection", zap.String("addr", conn.RemoteAddr().String()))
+		c := newConnHandler(conn, s)
 		go c.Serve(newctx)
 	}
 }

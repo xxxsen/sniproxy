@@ -61,10 +61,10 @@ func (h *connHandler) Serve(ctx context.Context) {
 	for _, step := range handlers {
 		stepStart := time.Now()
 		if err := step.fn(ctx); err != nil {
-			logutil.GetLogger(ctx).Error("process sni step failed", zap.Error(err), zap.String("step", step.name))
+			logutil.GetLogger(ctx).Error("process step failed", zap.Error(err), zap.String("step", step.name))
 			return
 		}
-		logutil.GetLogger(ctx).Debug("process sni step succ", zap.String("step", step.name), zap.Duration("cost", time.Since(stepStart)))
+		logutil.GetLogger(ctx).Debug("process step succ", zap.String("step", step.name), zap.Duration("cost", time.Since(stepStart)))
 	}
 	logutil.GetLogger(ctx).Info("processs sni proxy succ", zap.String("sni", h.sni), zap.Bool("is_tls", h.isTLS),
 		zap.String("next_target", h.nextTarget), zap.String("port", h.port), zap.Duration("cost", time.Since(start)))
