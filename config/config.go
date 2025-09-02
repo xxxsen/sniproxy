@@ -12,7 +12,6 @@ import (
 
 type Config struct {
 	Bind          string                           `json:"bind"`
-	ProxyProtocol bool                             `json:"proxy_protocol"`
 	WhiteList     []string                         `json:"whitelist"` //Deprecated: use DomainRule
 	Resolver      string                           `json:"resolver"`  //Deprecated: use DomainRule.Resolver
 	LogConfig     logger.LogConfig                 `json:"log_config"`
