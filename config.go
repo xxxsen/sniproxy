@@ -16,7 +16,7 @@ type DomainRuleItemConfig struct {
 type DomainRuleItemExtraConfig struct {
 	RewriteHTTPPort uint16 `json:"rewrite_http_port,omitempty"`
 	RewriteTLSPort  uint16 `json:"rewrite_tls_port,omitempty"`
-	ProxyProtocol   bool   `json:"proxy_protocol"`
+	ProxyProtocol   bool   `json:"proxy_protocol,omitempty"`
 }
 
 type DomainRuleItem struct {
