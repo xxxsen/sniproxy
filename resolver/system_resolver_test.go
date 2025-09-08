@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBasicResolver(t *testing.T) {
-	r, err := Make("tcp://223.5.5.5:53")
+func TestSystemResolver(t *testing.T) {
+	r, err := Make("system://")
 	assert.NoError(t, err)
 	ctx := context.Background()
 	ips, err := r.Resolve(ctx, "example.com")

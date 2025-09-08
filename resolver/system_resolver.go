@@ -6,7 +6,9 @@ import (
 
 func createSystemResolver(p *DNSParam) (*net.Resolver, error) {
 	// 使用系统默认的resolver，不需要自定义Dial函数
-	r := &net.Resolver{}
+	r := &net.Resolver{
+		PreferGo: true,
+	}
 	return r, nil
 }
 

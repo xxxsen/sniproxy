@@ -13,6 +13,7 @@ func createBasicResolver(p *DNSParam) (*net.Resolver, error) {
 			d := net.Dialer{
 				Timeout: time.Duration(p.Timeout) * time.Second,
 			}
+			address = p.Host
 			return d.DialContext(ctx, network, address)
 		},
 	}
