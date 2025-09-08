@@ -114,14 +114,13 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read first byte failed, err:%w", err)
 	}
-	var detecter = h.doResolveTlsTarget
+	var detecter func(ctx context.Context, r *bufio.Reader) (string, string, error)s
 	switch bs[0] {
 	case 'G', 'P', 'C', 'H', 'O', 'D', 'T': //HTTP GET/PUT/CONNECT/HEAD/OPTION/DELETE/TRACE
 		detecter = h.doResolveHTTPTarget
 	default:
 		detecter = h.doResolveTlsTarget
 		h.isTLS = true
-
 	}
 	domain, port, err := detecter(ctx, bio)
 	if err != nil {
