@@ -6,25 +6,25 @@ import (
 )
 
 type DomainRuleItemConfig struct {
-	Rule        string                     `json:"rule,omitempty"`
-	Type        string                     `json:"type,omitempty"`
-	Resolver    string                     `json:"resolver,omitempty"`
-	MappingName string                     `json:"mapping_name,omitempty"`
-	Extra       *DomainRuleItemExtraConfig `json:"extra,omitempty"`
-}
-
-type DomainRuleItemExtraConfig struct {
-	RewriteHTTPPort uint16 `json:"rewrite_http_port,omitempty"`
-	RewriteTLSPort  uint16 `json:"rewrite_tls_port,omitempty"`
+	Rule            string `json:"rule,omitempty"`
+	DomainRewrite   string `json:"domain_rewrite,omitempty"`
+	HTTPPortRewrite uint16 `json:"http_port_rewrite,omitempty"`
+	TLSPortRewrite  uint16 `json:"tls_port_rewrite,omitempty"`
 	ProxyProtocol   bool   `json:"proxy_protocol,omitempty"`
+	Resolver        string `json:"resolver,omitempty"`
 }
 
 type DomainRuleItem struct {
-	Rule        string
-	Type        string
-	Resolver    resolver.IResolver
-	MappingName string
-	Extra       *DomainRuleItemExtraConfig
+	Rule string
+	//
+	DomainRewrite string
+	//
+	HTTPPortRewrite uint16
+	TLSPortRewrite  uint16
+	//
+	ProxyProtocol bool
+	//
+	Resolver resolver.IResolver
 }
 
 type config struct {

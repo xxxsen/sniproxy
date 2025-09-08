@@ -7,7 +7,6 @@ import (
 	"log"
 	"sniproxy"
 	"sniproxy/config"
-	"sniproxy/constant"
 	"sniproxy/resolver"
 	"time"
 
@@ -53,10 +52,7 @@ func main() {
 func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem, error) {
 	var r resolver.IResolver
 	var err error
-	if dr.Type == constant.DomainRuleTypeResolve {
-		if len(dr.Resolver) == 0 {
-			return nil, fmt.Errorf("no resolver found")
-		}
+	if len(dr.Resolver) > 0 {
 		r, err = resolver.Make(dr.Resolver)
 		if err != nil {
 			return nil, fmt.Errorf("make resolver failed, err:%w", err)
@@ -64,10 +60,11 @@ func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem
 	}
 
 	return &sniproxy.DomainRuleItem{
-		Rule:        dr.Rule,
-		Type:        dr.Type,
-		Resolver:    r,
-		MappingName: dr.MappingName,
-		Extra:       dr.Extra,
+		Rule:            dr.Rule,
+		Resolver:        r,
+		DomainRewrite:   dr.DomainRewrite,
+		HTTPPortRewrite: dr.HTTPPortRewrite,
+		TLSPortRewrite:  dr.TLSPortRewrite,
+		ProxyProtocol:   dr.ProxyProtocol,
 	}, nil
 }

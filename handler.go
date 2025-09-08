@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"sniproxy/constant"
 	"strconv"
 	"strings"
 	"time"
@@ -51,7 +50,7 @@ func (h *connHandler) Serve(ctx context.Context) {
 	}{
 		{"resolve_sni", h.doResolveSNI},
 		{"rule_check", h.doRuleCheck},
-		{"basic_rule_handle", h.doBasicRuleHandle},
+		{"dns_resolve", h.doDNSResolve},
 		{"port_rewrite", h.doPortRewrite},
 		{"dial_remote", h.doDialRemote},
 		{"proxy_protocol", h.doProxyProtocol},
@@ -147,38 +146,33 @@ func (h *connHandler) doRuleCheck(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doBasicRuleHandle(ctx context.Context) error {
-	logutil.GetLogger(ctx).Debug("domain match rule", zap.String("domain", h.sni),
-		zap.String("rule", h.ruleData.Rule), zap.String("rule_type", h.ruleData.Type))
-	switch h.ruleData.Type {
-	case constant.DomainRuleTypeResolve:
-		ips, err := h.ruleData.Resolver.Resolve(ctx, h.sni)
-		if err != nil {
-			return err
-		}
-		if len(ips) == 0 {
-			return fmt.Errorf("no ip link with domain")
-		}
-		h.nextTarget = ips[rand.Int()%len(ips)].String()
-	case constant.DomainRuleTypeMapping:
-		h.nextTarget = h.ruleData.MappingName
-	default:
-		return fmt.Errorf("no rule type to handle, type:%s", h.ruleData.Type)
+func (h *connHandler) doDNSResolve(ctx context.Context) error {
+	logutil.GetLogger(ctx).Debug("domain match rule", zap.String("domain", h.sni), zap.String("rewrite", h.ruleData.DomainRewrite),
+		zap.String("rule", h.ruleData.Rule))
+
+	domain := h.sni
+	if len(h.ruleData.DomainRewrite) > 0 {
+		domain = h.ruleData.DomainRewrite
 	}
+	ips, err := h.ruleData.Resolver.Resolve(ctx, domain)
+	if err != nil {
+		return err
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("no ip link with domain")
+	}
+	h.nextTarget = ips[rand.Int()%len(ips)].String()
 	return nil
 }
 
 func (h *connHandler) doPortRewrite(ctx context.Context) error {
-	if h.ruleData.Extra == nil {
-		return nil
+	if h.ruleData.TLSPortRewrite > 0 && h.isTLS {
+		logutil.GetLogger(ctx).Debug("rewrite tls port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.TLSPortRewrite))
+		h.port = strconv.FormatUint(uint64(h.ruleData.TLSPortRewrite), 10)
 	}
-	if h.ruleData.Extra.RewriteTLSPort > 0 && h.isTLS {
-		logutil.GetLogger(ctx).Debug("rewrite tls port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.Extra.RewriteTLSPort))
-		h.port = strconv.FormatUint(uint64(h.ruleData.Extra.RewriteTLSPort), 10)
-	}
-	if h.ruleData.Extra.RewriteHTTPPort > 0 && !h.isTLS {
-		logutil.GetLogger(ctx).Debug("rewrite http port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.Extra.RewriteHTTPPort))
-		h.port = strconv.FormatUint(uint64(h.ruleData.Extra.RewriteHTTPPort), 10)
+	if h.ruleData.HTTPPortRewrite > 0 && !h.isTLS {
+		logutil.GetLogger(ctx).Debug("rewrite http port", zap.String("old_port", h.port), zap.Uint16("new_port", h.ruleData.HTTPPortRewrite))
+		h.port = strconv.FormatUint(uint64(h.ruleData.HTTPPortRewrite), 10)
 	}
 	return nil
 }
@@ -193,7 +187,7 @@ func (h *connHandler) doDialRemote(ctx context.Context) error {
 }
 
 func (h *connHandler) doProxyProtocol(ctx context.Context) error {
-	if h.ruleData.Extra == nil || !h.ruleData.Extra.ProxyProtocol {
+	if !h.ruleData.ProxyProtocol {
 		return nil
 	}
 	hdr := proxyproto.HeaderProxyFromAddrs(0, h.conn.RemoteAddr(), h.conn.LocalAddr())
