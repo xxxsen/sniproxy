@@ -15,6 +15,10 @@ type IResolver interface {
 	Resolve(ctx context.Context, domain string) ([]net.IP, error)
 }
 
+type IPLookuper interface {
+	LookupIP(ctx context.Context, network, domain string) ([]net.IP, error)
+}
+
 type DNSParam struct {
 	Protocol         string `schema:"-"`
 	Host             string `schema:"-"`
@@ -27,7 +31,7 @@ type DNSParam struct {
 	CacheSize        int64  `schema:"cache_size"`
 }
 
-type Creator func(p *DNSParam) (*net.Resolver, error)
+type Creator func(p *DNSParam) (IPLookuper, error)
 
 var mp = make(map[string]Creator)
 
@@ -75,7 +79,7 @@ func Register(schema string, cr Creator) {
 }
 
 type defaultResolver struct {
-	r     *net.Resolver
+	r     IPLookuper
 	param *DNSParam
 	c     *lru.Cache
 }
@@ -121,7 +125,7 @@ func (r *defaultResolver) resolveNetworkType(enablev4, enablev6 bool) (string, e
 	return "ip", nil
 }
 
-func newDefaultResolver(r *net.Resolver, p *DNSParam) (IResolver, error) {
+func newDefaultResolver(r IPLookuper, p *DNSParam) (IResolver, error) {
 	c, err := lru.New(int(p.CacheSize))
 	if err != nil {
 		return nil, err

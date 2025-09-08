@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func createBasicResolver(p *DNSParam) (*net.Resolver, error) {
+func createBasicResolver(p *DNSParam) (IPLookuper, error) {
 	r := &net.Resolver{
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {

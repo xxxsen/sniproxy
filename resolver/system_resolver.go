@@ -4,7 +4,7 @@ import (
 	"net"
 )
 
-func createSystemResolver(p *DNSParam) (*net.Resolver, error) {
+func createSystemResolver(p *DNSParam) (IPLookuper, error) {
 	// 使用系统默认的resolver，不需要自定义Dial函数
 	r := &net.Resolver{
 		PreferGo: true,

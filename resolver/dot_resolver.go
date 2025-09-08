@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func createDotResolver(p *DNSParam) (*net.Resolver, error) {
+func createDotResolver(p *DNSParam) (IPLookuper, error) {
 	var dialer net.Dialer
 	tlsConfig := &tls.Config{
 		ServerName:         p.Host,
