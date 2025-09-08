@@ -114,7 +114,7 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read first byte failed, err:%w", err)
 	}
-	var detecter func(ctx context.Context, r *bufio.Reader) (string, string, error)s
+	var detecter func(ctx context.Context, r *bufio.Reader) (string, string, error)
 	switch bs[0] {
 	case 'G', 'P', 'C', 'H', 'O', 'D', 'T': //HTTP GET/PUT/CONNECT/HEAD/OPTION/DELETE/TRACE
 		detecter = h.doResolveHTTPTarget
