@@ -52,11 +52,16 @@ func main() {
 func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem, error) {
 	var r resolver.IResolver
 	var err error
-	if len(dr.Resolver) > 0 {
-		r, err = resolver.Make(dr.Resolver)
-		if err != nil {
-			return nil, fmt.Errorf("make resolver failed, err:%w", err)
-		}
+
+	resolverStr := dr.Resolver
+	//如果resolver为空, 则使用系统dns进行解析
+	if len(resolverStr) == 0 {
+		resolverStr = "system://"
+	}
+
+	r, err = resolver.Make(resolverStr)
+	if err != nil {
+		return nil, fmt.Errorf("make resolver failed, err:%w", err)
 	}
 
 	return &sniproxy.DomainRuleItem{
