@@ -28,6 +28,7 @@ func main() {
 	opts := []sniproxy.Option{
 		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout) * time.Second),
 		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout) * time.Second),
+		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
 	}
 	for _, dr := range c.DomainRule {
 		dritem, err := makeDomainRule(dr)

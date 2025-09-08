@@ -8,6 +8,7 @@ SNI代理, 没啥特殊的, 写这个的目的主要是家里有部分机器不�
 ```json
 {
     "bind": ":8443", //监听地址
+    "proxy_protocol": false, //是否从前端接收PROXY protocol(v1/v2)
     "domain_rule": [ //域名规则
         {
             "rule": "full:www.baidu.com", 
