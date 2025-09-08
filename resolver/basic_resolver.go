@@ -9,12 +9,11 @@ import (
 func createBasicResolver(p *DNSParam) (*net.Resolver, error) {
 	r := &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
 				Timeout: time.Duration(p.Timeout) * time.Second,
 			}
-			address = p.Host
-			return d.DialContext(ctx, network, address)
+			return d.DialContext(ctx, network, p.Host)
 		},
 	}
 	return r, nil
