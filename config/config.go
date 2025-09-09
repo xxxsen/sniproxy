@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-    Bind          string                           `json:"bind"`
-    LogConfig     logger.LogConfig                 `json:"log_config"`
-    DialTimeout   int64                            `json:"dial_timeout"`
-    DetectTimeout int64                            `json:"detect_timeout"`
-    // When true, the server listens with PROXY protocol support (v1/v2)
-    ProxyProtocol bool                            `json:"proxy_protocol"`
-    DomainRule    []*sniproxy.DomainRuleItemConfig `json:"domain_rule"`
+	Bind          string           `json:"bind"`
+	LogConfig     logger.LogConfig `json:"log_config"`
+	DialTimeout   int64            `json:"dial_timeout"`
+	DetectTimeout int64            `json:"detect_timeout"`
+	// When true, the server listens with PROXY protocol support (v1/v2)
+	ProxyProtocol bool                             `json:"proxy_protocol"`
+	DomainRule    []*sniproxy.DomainRuleItemConfig `json:"domain_rule"`
 }
 
 func Parse(f string) (*Config, error) {
