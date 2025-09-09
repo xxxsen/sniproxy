@@ -1,38 +1,43 @@
 sniproxy
 ===
 
-SNI代理, 没啥特殊的, 写这个的目的主要是家里有部分机器不能走透明代理, 但是机器上确实有部分服务是需要科学上网才能访问的, 所以最后就整了这么个代理, 通过DNS劫持, 将部分域名劫持到SNI代理机, 之后SNI代理通过dot解析避免劫持来达到特殊机器通过SNI代理实现科学上网的目的。
+## 简介
+- 一个简单的 SNI 代理：按域名白名单转发 TCP 流量，解析可走 DoT，支持监听端/转发端的 PROXY protocol。
 
-**配置:**
+## 快速开始
+- 准备配置文件 `config.json`（见下例）
+- 启动：`go run ./cmd -config ./config.json`
 
+## 配置示例
 ```json
 {
-    "bind": ":8443", //监听地址
-    "domain_rule": [ //域名规则
-        {
-            "rule": "full:www.baidu.com", 
-            "type": "resolve", //直接解析并转发
-            "resolver": "udp://223.5.5.5:53" 
-        },
-        {
-            "rule": "full:baidu.com",
-            "type": "mapping", //将域名映射到另一个名字, 并使用该名字进行解析&转发
-            "mapping_name": "www.baidu.com", //type = mapping时有效, 这个时候使用系统dns进行解析, 即使配置了resolver也不生效
-            "extra": {
-                "rewrite_tls_port": 8443, //改写tls目标端口
-                "rewrite_http_port": 8080 //改写http目标端口
-            }
-        }
-    ]
+  "bind": ":8443",
+  "proxy_protocol": false,
+  "dial_timeout": 10,
+  "detect_timeout": 10,
+  "domain_rule": [
+    { "rule": "suffix:google.com", "resolver": "dot://dns10.quad9.net", "tls_port_rewrite": 443 },
+    { "rule": "full:svc.example.com", "resolver": "system://", "proxy_protocol": true }
+  ]
 }
 ```
+## 字段速查
+- 顶层：`bind`、`proxy_protocol`、`dial_timeout`、`detect_timeout`、`domain_rule`
+- 规则：`rule`、`resolver`、`domain_rewrite`、`http_port_rewrite`、`tls_port_rewrite`、`proxy_protocol`
 
-**resolver**目前仅支持: tcp/udp/dot 3种协议, 格式为`schema://host:port`, 例如下面这几个
+## Resolver
+- `system://`、`udp://host[:53]`、`tcp://host[:53]`、`dot://host[:853]`
+- 可选参数：`timeout`、`enable_ipv4`、`enable_ipv6`、`cache_ttl`、`cache_size` 等
 
-```text
-udp://223.5.5.5:53
-tcp://223.6.6.6:53
-dot://dns10.quad9.net
+## 规则类型
+- `full`、`suffix`、`keyword`、`regexp`（不写类型时默认 `suffix`）
+
+## 注意事项
+- 仅识别 TLS 与 HTTP/1.x
+- DoT 建议使用主机名（避免证书校验问题）
+- 启用监听端 PROXY 后限制上游来源（防止伪造）
+
+## 测试
+```bash
+go test ./resolver -v
 ```
-
-**rule**支持的类型: `full`, `suffix`, `regexp`, `keyword`, 当不填类型, 则使用`suffix`类型

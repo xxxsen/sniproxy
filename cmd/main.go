@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"sniproxy"
-	"sniproxy/config"
-	"sniproxy/constant"
-	"sniproxy/resolver"
 	"time"
+
+	"github.com/xxxsen/sniproxy"
+	"github.com/xxxsen/sniproxy/config"
+	"github.com/xxxsen/sniproxy/resolver"
 
 	"github.com/xxxsen/common/logger"
 	"github.com/xxxsen/common/logutil"
@@ -29,6 +29,7 @@ func main() {
 	opts := []sniproxy.Option{
 		sniproxy.WithDialTimeout(time.Duration(c.DialTimeout) * time.Second),
 		sniproxy.WithDetectTimeout(time.Duration(c.DetectTimeout) * time.Second),
+		sniproxy.WithListenProxyProtocol(c.ProxyProtocol),
 	}
 	for _, dr := range c.DomainRule {
 		dritem, err := makeDomainRule(dr)
@@ -53,21 +54,24 @@ func main() {
 func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem, error) {
 	var r resolver.IResolver
 	var err error
-	if dr.Type == constant.DomainRuleTypeResolve {
-		if len(dr.Resolver) == 0 {
-			return nil, fmt.Errorf("no resolver found")
-		}
-		r, err = resolver.Make(dr.Resolver)
-		if err != nil {
-			return nil, fmt.Errorf("make resolver failed, err:%w", err)
-		}
+
+	resolverStr := dr.Resolver
+	//如果resolver为空, 则使用系统dns进行解析
+	if len(resolverStr) == 0 {
+		resolverStr = "system://"
+	}
+
+	r, err = resolver.Make(resolverStr)
+	if err != nil {
+		return nil, fmt.Errorf("make resolver failed, err:%w", err)
 	}
 
 	return &sniproxy.DomainRuleItem{
-		Rule:        dr.Rule,
-		Type:        dr.Type,
-		Resolver:    r,
-		MappingName: dr.MappingName,
-		Extra:       dr.Extra,
+		Rule:            dr.Rule,
+		Resolver:        r,
+		DomainRewrite:   dr.DomainRewrite,
+		HTTPPortRewrite: dr.HTTPPortRewrite,
+		TLSPortRewrite:  dr.TLSPortRewrite,
+		ProxyProtocol:   dr.ProxyProtocol,
 	}, nil
 }

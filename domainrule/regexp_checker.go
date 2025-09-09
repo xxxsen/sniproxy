@@ -3,7 +3,8 @@ package domainrule
 import (
 	"context"
 	"regexp"
-	"sniproxy/constant"
+
+	"github.com/xxxsen/sniproxy/constant"
 )
 
 type regexpChecker struct {

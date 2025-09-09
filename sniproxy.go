@@ -3,10 +3,12 @@ package sniproxy
 import (
 	"context"
 	"net"
-	"sniproxy/domainrule"
 	"strconv"
 	"time"
 
+	"github.com/xxxsen/sniproxy/domainrule"
+
+	"github.com/pires/go-proxyproto"
 	"github.com/xxxsen/common/logutil"
 	"github.com/xxxsen/common/trace"
 	"go.uber.org/zap"
@@ -40,6 +42,10 @@ func (s *sniproxyImpl) Run(ctx context.Context) error {
 	ls, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return err
+	}
+	// Wrap listener to accept PROXY protocol (v1/v2) when enabled
+	if s.c.listenProxyProtocol {
+		ls = &proxyproto.Listener{Listener: ls}
 	}
 	s.serveListener(ctx, ls)
 	return nil

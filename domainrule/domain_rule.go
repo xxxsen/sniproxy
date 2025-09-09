@@ -3,8 +3,9 @@ package domainrule
 import (
 	"context"
 	"fmt"
-	"sniproxy/constant"
 	"strings"
+
+	"github.com/xxxsen/sniproxy/constant"
 )
 
 type domainRuleCheckItem struct {
