@@ -2,7 +2,8 @@ package domainrule
 
 import (
 	"context"
-	"sniproxy/constant"
+
+	"github.com/xxxsen/sniproxy/constant"
 )
 
 type fullNameChecker struct {

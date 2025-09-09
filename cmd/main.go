@@ -5,10 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"sniproxy"
-	"sniproxy/config"
-	"sniproxy/resolver"
 	"time"
+
+	"github.com/xxxsen/sniproxy"
+	"github.com/xxxsen/sniproxy/config"
+	"github.com/xxxsen/sniproxy/resolver"
 
 	"github.com/xxxsen/common/logger"
 	"github.com/xxxsen/common/logutil"

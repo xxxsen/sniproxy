@@ -1,4 +1,4 @@
-module sniproxy
+module github.com/xxxsen/sniproxy
 
 go 1.24
 

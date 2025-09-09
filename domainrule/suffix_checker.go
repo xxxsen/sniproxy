@@ -2,8 +2,9 @@ package domainrule
 
 import (
 	"context"
-	"sniproxy/constant"
 	"strings"
+
+	"github.com/xxxsen/sniproxy/constant"
 )
 
 type suffixChecker struct {

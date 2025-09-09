@@ -1,16 +1,17 @@
 package sniproxy
 
 import (
-    "context"
-    "net"
-    "sniproxy/domainrule"
-    "strconv"
-    "time"
+	"context"
+	"net"
+	"strconv"
+	"time"
 
-    "github.com/xxxsen/common/logutil"
-    "github.com/xxxsen/common/trace"
-    "go.uber.org/zap"
-    "github.com/pires/go-proxyproto"
+	"github.com/xxxsen/sniproxy/domainrule"
+
+	"github.com/pires/go-proxyproto"
+	"github.com/xxxsen/common/logutil"
+	"github.com/xxxsen/common/trace"
+	"go.uber.org/zap"
 )
 
 type ISNIProxy interface {
@@ -38,16 +39,16 @@ func New(addr string, opts ...Option) (ISNIProxy, error) {
 }
 
 func (s *sniproxyImpl) Run(ctx context.Context) error {
-    ls, err := net.Listen("tcp", s.addr)
-    if err != nil {
-        return err
-    }
-    // Wrap listener to accept PROXY protocol (v1/v2) when enabled
-    if s.c.listenProxyProtocol {
-        ls = &proxyproto.Listener{Listener: ls}
-    }
-    s.serveListener(ctx, ls)
-    return nil
+	ls, err := net.Listen("tcp", s.addr)
+	if err != nil {
+		return err
+	}
+	// Wrap listener to accept PROXY protocol (v1/v2) when enabled
+	if s.c.listenProxyProtocol {
+		ls = &proxyproto.Listener{Listener: ls}
+	}
+	s.serveListener(ctx, ls)
+	return nil
 }
 
 func (s *sniproxyImpl) serveListener(ctx context.Context, ls net.Listener) {

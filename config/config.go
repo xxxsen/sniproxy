@@ -3,9 +3,9 @@ package config
 import (
 	"encoding/json"
 	"os"
-	"sniproxy"
 
 	"github.com/xxxsen/common/logger"
+	"github.com/xxxsen/sniproxy"
 )
 
 type Config struct {

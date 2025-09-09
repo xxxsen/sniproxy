@@ -1,8 +1,9 @@
 package sniproxy
 
 import (
-	"sniproxy/resolver"
 	"time"
+
+	"github.com/xxxsen/sniproxy/resolver"
 )
 
 type DomainRuleItemConfig struct {
