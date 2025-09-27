@@ -49,7 +49,8 @@ func (h *connHandler) Serve(ctx context.Context) {
 		fn   func(ctx context.Context) error
 	}{
 		{"resolve_sni", h.doResolveSNI},
-		{"rule_check", h.doRuleCheck},
+		{"select_rule", h.doSelectRule},
+		{"check_whitelist", h.doCheckWhiteList},
 		{"dns_resolve", h.doDNSResolve},
 		{"port_rewrite", h.doPortRewrite},
 		{"dial_remote", h.doDialRemote},
@@ -133,7 +134,7 @@ func (h *connHandler) doResolveSNI(ctx context.Context) error {
 	return nil
 }
 
-func (h *connHandler) doRuleCheck(ctx context.Context) error {
+func (h *connHandler) doSelectRule(ctx context.Context) error {
 	data, ok, err := h.svr.checker.Check(ctx, h.sni)
 	if err != nil {
 		return fmt.Errorf("check rule failed, err:%w", err)
@@ -142,6 +143,21 @@ func (h *connHandler) doRuleCheck(ctx context.Context) error {
 		return fmt.Errorf("sni not in white list, name:%s", h.sni)
 	}
 	h.ruleData = data.(*DomainRuleItem)
+	return nil
+}
+
+func (h *connHandler) doCheckWhiteList(ctx context.Context) error {
+	host, _, err := net.SplitHostPort(h.conn.RemoteAddr().String())
+	if err != nil {
+		return fmt.Errorf("unable to read remote host, err:%w", err)
+	}
+	ok, err := h.ruleData.WhiteList.Check(host)
+	if err != nil {
+		return fmt.Errorf("check white list failed, err:%w", err)
+	}
+	if !ok {
+		return fmt.Errorf("remote host not in white list, skip next, host:%s", host)
+	}
 	return nil
 }
 

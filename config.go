@@ -3,16 +3,18 @@ package sniproxy
 import (
 	"time"
 
+	"github.com/xxxsen/common/ipcheck"
 	"github.com/xxxsen/sniproxy/resolver"
 )
 
 type DomainRuleItemConfig struct {
-	Rule            string `json:"rule,omitempty"`
-	DomainRewrite   string `json:"domain_rewrite,omitempty"`
-	HTTPPortRewrite uint16 `json:"http_port_rewrite,omitempty"`
-	TLSPortRewrite  uint16 `json:"tls_port_rewrite,omitempty"`
-	ProxyProtocol   bool   `json:"proxy_protocol,omitempty"`
-	Resolver        string `json:"resolver,omitempty"`
+	Rule            string   `json:"rule,omitempty"`
+	DomainRewrite   string   `json:"domain_rewrite,omitempty"`
+	HTTPPortRewrite uint16   `json:"http_port_rewrite,omitempty"`
+	TLSPortRewrite  uint16   `json:"tls_port_rewrite,omitempty"`
+	ProxyProtocol   bool     `json:"proxy_protocol,omitempty"`
+	Resolver        string   `json:"resolver,omitempty"`
+	WhiteList       []string `json:"white_list"`
 }
 
 type DomainRuleItem struct {
@@ -25,7 +27,8 @@ type DomainRuleItem struct {
 	//
 	ProxyProtocol bool
 	//
-	Resolver resolver.IResolver
+	Resolver  resolver.IResolver
+	WhiteList ipcheck.IChecker
 }
 
 type config struct {

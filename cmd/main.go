@@ -11,6 +11,7 @@ import (
 	"github.com/xxxsen/sniproxy/config"
 	"github.com/xxxsen/sniproxy/resolver"
 
+	"github.com/xxxsen/common/ipcheck"
 	"github.com/xxxsen/common/logger"
 	"github.com/xxxsen/common/logutil"
 	"go.uber.org/zap"
@@ -65,6 +66,14 @@ func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem
 	if err != nil {
 		return nil, fmt.Errorf("make resolver failed, err:%w", err)
 	}
+	ck := ipcheck.TrueChecker()
+	if len(dr.WhiteList) > 0 {
+		ckinst := ipcheck.New()
+		if err := ckinst.AddList(dr.WhiteList...); err != nil {
+			return nil, err
+		}
+		ck = ckinst
+	}
 
 	return &sniproxy.DomainRuleItem{
 		Rule:            dr.Rule,
@@ -73,5 +82,6 @@ func makeDomainRule(dr *sniproxy.DomainRuleItemConfig) (*sniproxy.DomainRuleItem
 		HTTPPortRewrite: dr.HTTPPortRewrite,
 		TLSPortRewrite:  dr.TLSPortRewrite,
 		ProxyProtocol:   dr.ProxyProtocol,
+		WhiteList:       ck,
 	}, nil
 }
