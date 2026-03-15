@@ -175,7 +175,13 @@ dot://dns10.quad9.net?timeout=5&keepalive=true
 
 ## Docker
 
-镜像可以直接从仓库构建：
+可以直接使用已发布镜像：
+
+```bash
+docker run --rm -p 8443:8443 -v "$(pwd)/config.json:/config.json:ro" xxxsen/sniproxy:latest -config /config.json
+```
+
+如果需要自行构建，再使用仓库内的 `Dockerfile`：
 
 ```bash
 docker build -t sniproxy .
